@@ -29,9 +29,9 @@ def select_nf(params_all, nf):
         output['shapes'] = params_all['shapes'][nf:nf+1, :]
     return output
 
-def load_model(gender='neutral', use_cuda=True, model_type='smpl', skel_type='body25', device=None, model_path='data/smplx'):
+def load_model(gender='male', use_cuda=True, model_type='smpl', skel_type='body25', device=None, model_path='data/smplx'):
     # prepare SMPL model
-    # print('[Load model {}/{}]'.format(model_type, gender))
+    print('[Load model {}/{}]'.format(model_type, gender))
     import torch
     if device is None:
         if use_cuda and torch.cuda.is_available():
