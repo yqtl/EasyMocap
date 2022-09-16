@@ -28,11 +28,13 @@ def extract_video(videoname, path, start, end, step):
     video = cv2.VideoCapture(videoname)
     totalFrames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     for cnt in tqdm(range(totalFrames), desc='{:10s}'.format(os.path.basename(videoname))):
+    #for cnt in tqdm(range(0, totalFrames, step), desc='{:10s}'.format(os.path.basename(videoname))):
         ret, frame = video.read()
         if cnt < start:continue
         if cnt >= end:break
         if not ret:continue
-        cv2.imwrite(join(outpath, '{:06d}.jpg'.format(cnt)), frame)
+        if (cnt % step ==0):
+            cv2.imwrite(join(outpath, '{:06d}.jpg'.format(cnt)), frame)
     video.release()
     return base
 

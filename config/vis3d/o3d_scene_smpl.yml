@@ -7,5 +7,5 @@ body_model:
     model_path: "data/smplx/smpl"
     model_type: "smpl"
     gender: "neutral"
-    device: "cuda"
+    device: "cpu"
     regressor_path: "data/smplx/J_regressor_body25.npy"

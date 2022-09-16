@@ -15,7 +15,7 @@ affinity:
   svt_py: True
   aff_funcs:
     "easymocap.affinity.ray.Affinity":
-      MAX_DIST: 0.1
+      MAX_DIST: 0.01
   svt_args:
     maxIter: 20
     w_sparse: 0.1
