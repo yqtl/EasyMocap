@@ -14,7 +14,10 @@ from ..affinity.affinity import getDimGroups
 from ..affinity.matchSVT import matchSVT
 from ..mytools.reader import read_keypoints2d, read_keypoints3d
 from ..mytools.file_utils import read_annot, read_json, save_annot, save_json, write_keypoints3d
-
+import time
+#import multiprocessing
+from pathos.pools import ProcessPool as Pool
+#nprocs = int(multiprocessing.cpu_count()/2)
 def check_path(x):
     assert os.path.exists(x), '{} not exists!'.format(x)
 
@@ -34,39 +37,96 @@ class BaseTrack:
         }
     
     def auto_track(self):
+        global results
         results = self.read()
+        #measure execution time
+        start = time.time()
         edges = self.compute_dist(results)
+        print(  "Time taken to compute distance matrix: ", time.time() - start)
+        #measure execution time
+        start = time.time()        
         results = self.associate(results, edges)
+        print(  "Time taken to associate: ", time.time() - start)
+        #measure execution time
+        start = time.time()
         results, occupancy = self.reset_id(results)
+        print(  "Time taken to reset id: ", time.time() - start)
+        #measure execution time
         results, occupancy = self.smooth(results, occupancy)
+        print("Time taken to smooth: ", time.time() - start)
+        #measure execution time
         self.write(results, occupancy)
+        print("Time taken to write: ", time.time() - start)
 
     def read(self):
         return []
 
     def write(self, results, occupancy):
         return 0
-
+    #import numba
+    #@numba.jit(forceobj=True)
+    def job(self, frame):
+        WINDOW_SIZE = self.WINDOW_SIZE
+        window_size = min(WINDOW_SIZE, nFrames- frame)
+        results_window = results[frame:frame+window_size]
+        dimGroups, frames = getDimGroups(results_window)
+        dist = self._compute_dist(dimGroups, results_window)
+        res = matchSVT(dist, dimGroups, control=self.svt_args)
+        xx, yy = np.where(res)
+        for x, y in zip(xx, yy):
+            if x >= y:continue
+            nf0, nf1 = frames[x], frames[y]
+            ni0, ni1 = x - dimGroups[nf0], y - dimGroups[nf1]
+            edge = ((nf0+frame, ni0), (nf1+frame, ni1))
+            if edge not in tmp_edges:
+                tmp_edges[edge] = []
+            tmp_edges[edge].append(res[x, y])
+        return tmp_edges
     def compute_dist(self, results):
+        global nFrames
         nFrames = len(results)
         WINDOW_SIZE = self.WINDOW_SIZE
+        global tmp_edges
+        tmp_edges = {}
         edges = {}
-        for start in tqdm(range(0, nFrames - 1), desc='affinity'):
-            window_size = min(WINDOW_SIZE, nFrames - start)
-            results_window = results[start:start+window_size]
-            dimGroups, frames = getDimGroups(results_window)
-            dist = self._compute_dist(dimGroups, results_window)
-            res = matchSVT(dist, dimGroups, control=self.svt_args)
-            xx, yy = np.where(res)
-            for x, y in zip(xx, yy):
-                if x >= y:continue
-                nf0, nf1 = frames[x], frames[y]
-                ni0, ni1 = x - dimGroups[nf0], y - dimGroups[nf1]
-                edge = ((nf0+start, ni0), (nf1+start, ni1))
+        #pool=multiprocessing.Pool(processes=2)
+        pool=Pool(processes=2)
+        tmp_edges=pool.map(self.job, [*range(0, nFrames)])
+        #edges = pool.map(job, [*range(0, nFrames -1)])
+        pool.close()
+        pool.join()
+        #import ipdb;ipdb.set_trace()
+        #append tmp_edges to edges
+        for tmp_edge in tmp_edges:
+            for edge in tmp_edge:
                 if edge not in edges:
                     edges[edge] = []
-                edges[edge].append(res[x, y])
+                #edges[edge].append(tmp_edge[edge])
+                edges[edge]=tmp_edge[edge]
         return edges
+             #   edges[edge]=tmp_edge[edge]
+
+    # def compute_dist(self, results):
+    #     #import ipdb;ipdb.set_trace()
+    #     nFrames = len(results)
+    #     WINDOW_SIZE = self.WINDOW_SIZE
+    #     edges = {}
+    #     for start in tqdm(range(0, nFrames - 1), desc='affinity'):
+    #         window_size = min(WINDOW_SIZE, nFrames - start)
+    #         results_window = results[start:start+window_size]
+    #         dimGroups, frames = getDimGroups(results_window)
+    #         dist = self._compute_dist(dimGroups, results_window)
+    #         res = matchSVT(dist, dimGroups, control=self.svt_args)
+    #         xx, yy = np.where(res)
+    #         for x, y in zip(xx, yy):
+    #             if x >= y:continue
+    #             nf0, nf1 = frames[x], frames[y]
+    #             ni0, ni1 = x - dimGroups[nf0], y - dimGroups[nf1]
+    #             edge = ((nf0+start, ni0), (nf1+start, ni1))
+    #             if edge not in edges:
+    #                 edges[edge] = []
+    #             edges[edge].append(res[x, y])
+    #     return edges
 
     def associate(self, results, edges):
         WINDOW_SIZE = self.WINDOW_SIZE
