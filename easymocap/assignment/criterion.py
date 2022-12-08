@@ -66,6 +66,9 @@ class CritRange(BaseCrit):
         (k3d[:, 1] > self.min[1]) & (k3d[:, 1] < self.max[1]) &\
         (k3d[:, 2] > self.min[2]) & (k3d[:, 2] < self.max[2])
         self.log = '{}: {}'.format(self.name, k3d)
+        return 1
+        if crit.sum()/crit.shape[0] < self.rate:
+            print("crit range %f smaller than rate %f"%(crit.sum()/crit.shape[0],self.rate))
         return crit.sum()/crit.shape[0] > self.rate
 
 class CritMinMax(BaseCrit):  
