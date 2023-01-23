@@ -66,7 +66,8 @@ class CritRange(BaseCrit):
         (k3d[:, 1] > self.min[1]) & (k3d[:, 1] < self.max[1]) &\
         (k3d[:, 2] > self.min[2]) & (k3d[:, 2] < self.max[2])
         self.log = '{}: {}'.format(self.name, k3d)
-        return crit.sum()/crit.shape[0] > self.rate
+        #return crit.sum()/crit.shape[0] > self.rate
+        return 1
 
 class CritMinMax(BaseCrit):  
     def __init__(self, max_human_length, min_conf) -> None:

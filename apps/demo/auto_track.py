@@ -18,8 +18,8 @@ if __name__ == "__main__":
     cfg = {
         'path': args.path,
         'out': args.out,
-        'WINDOW_SIZE': 10,
-        'MIN_FRAMES': 10,
+        'WINDOW_SIZE': 80,
+        'MIN_FRAMES': 80,
         'SMOOTH_SIZE': 5
     }
     if args.track3d:
